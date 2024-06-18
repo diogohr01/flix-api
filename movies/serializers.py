@@ -3,6 +3,7 @@ from rest_framework import serializers
 from genres.models import Genre
 from actors.models import Actor
 from actors.serializers import ActorNameSerializer
+from django.db.models import Avg
 
 
 class MovieSerializer(serializers.Serializer):
@@ -24,10 +25,12 @@ class MovieSerializer(serializers.Serializer):
 class MovieModelSerializer(serializers.ModelSerializer):
     actors = ActorNameSerializer(many=True)
     genre = serializers.SerializerMethodField()
+    rate = serializers.SerializerMethodField(read_only=True)
     
     class Meta:
         model = Movie
-        fields = ['id', 'title', 'genre', 'release_date', 'actors', 'resume']
+        fields = ['id', 'title','rate','genre', 'release_date', 'actors', 'resume']
+        
     
 
     def validate_release_date(self, value):
@@ -42,8 +45,23 @@ class MovieModelSerializer(serializers.ModelSerializer):
 
     def get_genre(self, obj):
         return obj.genre.name if obj.genre else None
-        
     
+    def get_rate(self, obj):
+        rate = obj.reviews.aggregate(Avg('stars'))['stars__avg']
+        if rate:
+            return round(rate, 1)
+        return None
+        '''
+        reviews = obj.reviews.all()
+        if reviews:
+            sum_reviews = 0
+            for review in reviews:
+                sum_reviews += review.stars
+                reviews_count = reviews.count()
+            return round(float(sum_reviews / reviews_count), 1)
+        
+        return None      
+    '''
 
 
     
